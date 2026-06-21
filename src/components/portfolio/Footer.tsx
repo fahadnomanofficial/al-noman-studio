@@ -11,7 +11,7 @@ export function Footer() {
           </span>
           <div>
             <div className="font-display text-sm font-semibold text-foreground">Fahad Al Noman</div>
-            <div className="font-mono text-[11px] text-muted-foreground">Full-Stack Dev · Malta</div>
+            <div className="font-mono text-[11px] text-muted-foreground">Full-Stack Dev · Worldwide</div>
           </div>
         </div>
 
