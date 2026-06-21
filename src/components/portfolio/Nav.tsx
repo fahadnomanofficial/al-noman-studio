@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Download } from "lucide-react";
 import { NAV_LINKS, CV_PATH } from "./data";
 import { useActiveSection } from "./motion";
+import fahadAsset from "@/assets/fahad.jpg.asset.json";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -29,8 +30,8 @@ export function Nav() {
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
         <a href="#top" className="group flex items-center gap-2">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/10 font-display text-sm font-bold text-accent ring-1 ring-accent/30 transition-all group-hover:shadow-glow-sm">
-            FN
+          <span className="grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-accent/10 ring-1 ring-accent/30 transition-all group-hover:shadow-glow-sm">
+            <img src={fahadAsset.url} alt="Fahad Al Noman" className="h-full w-full object-cover" />
           </span>
           <span className="hidden font-display text-sm font-semibold tracking-tight text-foreground sm:inline">
             Fahad Al Noman
