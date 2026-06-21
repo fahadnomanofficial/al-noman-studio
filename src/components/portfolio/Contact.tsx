@@ -44,7 +44,7 @@ export function Contact() {
         <SectionHeader
           eyebrow="contact"
           title="Let's build something."
-          intro="Open to freelance projects and full-time remote / EU roles. Based in Qormi, Malta."
+          intro="Open to freelance projects and full-time remote roles worldwide. Based in Qormi, Malta."
         />
 
         <motion.div

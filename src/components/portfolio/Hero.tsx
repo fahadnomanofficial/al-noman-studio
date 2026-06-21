@@ -23,7 +23,7 @@ export function Hero() {
 
           <motion.p variants={fadeUp} className="mt-5 font-display text-xl text-foreground/85 sm:text-2xl">
             Full-Stack Web Developer & Digital Marketer,{" "}
-            <span className="text-gradient-accent">based in Malta</span>.
+            <span className="text-gradient-accent">working worldwide from Malta</span>.
           </motion.p>
 
           <motion.p variants={fadeUp} className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
