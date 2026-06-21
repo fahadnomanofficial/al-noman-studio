@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { useMotionValue, useSpring, type MotionValue } from "framer-motion";
+import { useMotionValue, useSpring, type MotionValue, type Variants } from "framer-motion";
 
-export const fadeUp = {
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+export const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE as unknown as number[] } },
 };
 
-export const staggerParent = {
+export const staggerParent: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
