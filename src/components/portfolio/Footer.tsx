@@ -1,14 +1,17 @@
 import { Mail, Linkedin } from "lucide-react";
 import { NAV_LINKS, CONTACT } from "./data";
+import fahadAsset from "@/assets/fahad.jpg.asset.json";
 
 export function Footer() {
   return (
     <footer className="border-t border-border bg-surface/40 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-5 sm:flex-row sm:items-center sm:px-8">
         <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/10 font-display text-sm font-bold text-accent ring-1 ring-accent/30">
-            FN
-          </span>
+          <img
+            src={fahadAsset.url}
+            alt="Fahad Al Noman"
+            className="h-9 w-9 rounded-xl object-cover ring-1 ring-accent/30"
+          />
           <div>
             <div className="font-display text-sm font-semibold text-foreground">Fahad Al Noman</div>
             <div className="font-mono text-[11px] text-muted-foreground">Full-Stack Dev · Worldwide</div>
