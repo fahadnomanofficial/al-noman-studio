@@ -1,22 +1,41 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, Phone, MapPin, Linkedin, Download, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Linkedin, Download, Send, MessageCircle, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { SectionHeader } from "./SectionHeader";
 import { CONTACT, CV_PATH } from "./data";
 import { fadeUp, staggerParent, viewportOnce } from "./motion";
 
 export function Contact() {
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    whatsapp: true,
+    message: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
 
-  // NOTE: This form opens the user's mail client via `mailto:`.
-  // Upgrade path: wire to Formspree, Resend, or a server function for proper delivery.
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const subject = encodeURIComponent(`Portfolio enquiry from ${form.name || "—"}`);
-    const body = encodeURIComponent(
-      `Name: ${form.name}\nEmail: ${form.email}\n\n${form.message}`,
-    );
-    window.location.href = `mailto:${CONTACT.email}?subject=${subject}&body=${body}`;
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/public/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Failed to send message");
+      toast.success("Message sent — I'll get back to you shortly.");
+      setForm({ name: "", email: "", phone: "", whatsapp: true, message: "" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -39,6 +58,7 @@ export function Contact() {
             {[
               { Icon: Mail, label: "Email", value: CONTACT.email, href: `mailto:${CONTACT.email}` },
               { Icon: Phone, label: "Phone", value: CONTACT.phone, href: `tel:${CONTACT.phone.replace(/\s/g, "")}` },
+              { Icon: MessageCircle, label: "WhatsApp", value: CONTACT.phone, href: CONTACT.whatsapp },
               { Icon: MapPin, label: "Location", value: CONTACT.location },
               { Icon: Linkedin, label: "LinkedIn", value: "fahad-al-noman", href: CONTACT.linkedin },
             ].map(({ Icon, label, value, href }) => {
@@ -90,6 +110,7 @@ export function Contact() {
                 <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Name</span>
                 <input
                   required
+                  maxLength={100}
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -100,6 +121,7 @@ export function Contact() {
                 <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Email</span>
                 <input
                   required
+                  maxLength={255}
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
@@ -107,10 +129,37 @@ export function Contact() {
                 />
               </label>
             </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+              <label className="block">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Phone</span>
+                <input
+                  required
+                  type="tel"
+                  maxLength={40}
+                  placeholder="+356 ..."
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-accent"
+                />
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground transition-colors hover:border-accent/50">
+                <input
+                  type="checkbox"
+                  checked={form.whatsapp}
+                  onChange={(e) => setForm({ ...form, whatsapp: e.target.checked })}
+                  className="h-4 w-4 accent-accent"
+                />
+                <MessageCircle className="h-4 w-4 text-accent" />
+                <span>Available on WhatsApp</span>
+              </label>
+            </div>
+
             <label className="mt-4 block">
               <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Message</span>
               <textarea
                 required
+                maxLength={2000}
                 rows={6}
                 value={form.message}
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -119,10 +168,20 @@ export function Contact() {
             </label>
             <button
               type="submit"
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground shadow-glow transition-transform hover:scale-[1.02] sm:w-auto"
+              disabled={submitting}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground shadow-glow transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
-              <Send className="h-4 w-4" />
-              Send Message
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sending…
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Send Message
+                </>
+              )}
             </button>
           </motion.form>
         </motion.div>

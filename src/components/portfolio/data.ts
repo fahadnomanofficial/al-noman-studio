@@ -139,6 +139,7 @@ export const CERTIFICATIONS = [
 export const CONTACT = {
   email: "fahadnomanofficial@gmail.com",
   phone: "+356 9978 4477",
+  whatsapp: "https://wa.me/35699784477",
   location: "Qormi, Malta",
   linkedin: "https://www.linkedin.com/in/fahad-al-noman-555039411/",
 };
