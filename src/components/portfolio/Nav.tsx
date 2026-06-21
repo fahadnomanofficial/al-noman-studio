@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Download } from "lucide-react";
 import { NAV_LINKS, CV_PATH } from "./data";
 import { useActiveSection } from "./motion";
+import fahadAsset from "@/assets/fahad.jpg.asset.json";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
