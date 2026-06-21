@@ -1,64 +1,51 @@
-# Fahad Al Noman — Portfolio Site Plan
 
-A single-page, dark-themed, fully responsive portfolio with an "anti-gravity" motion system: floating/levitating elements that drift, parallax against scroll, and react to cursor movement.
+# Plan: Photo, WhatsApp, and Email-sending Contact Form
 
-## Anti-gravity motion system
+## 1. Add your photo
+- Upload `download (2)0.png` to the CDN via `lovable-assets` → `src/assets/fahad.jpg.asset.json`.
+- Use it in the **About** section as a floating, rounded portrait (anti-gravity bob + subtle glow ring) on the left, bio text on the right. Keeps the hero's code mockup intact so the hero still reads as "developer".
 
-A reusable motion layer (Framer Motion + a small `useMousePosition` + `useScroll` hook) applied across the site:
+## 2. Contact form — add phone + WhatsApp checkbox
+In `src/components/portfolio/Contact.tsx`:
+- Add a **Phone** input (required, with light validation).
+- Add a checkbox: **"This number is on WhatsApp"** (default checked).
+- Both fields included in the email payload sent to you.
 
-- **Floating hero objects** — the decorative code-editor mockup, accent orbs, and skill chips gently bob on a sine loop (translateY ±8px, 4–6s) so the page feels weightless.
-- **Cursor parallax** — hero blobs and section accents shift a few pixels opposite the cursor (springy, damped).
-- **Scroll parallax** — background gradient orbs and section dividers drift at different speeds via `useScroll` + `useTransform`.
-- **Magnetic buttons** — primary CTAs and project cards lean toward the cursor on hover, then spring back.
-- **Reveal-on-scroll** — sections fade + slide-up via `whileInView`, staggered children for grids.
-- **Floating nav** — sticky top nav lifts on scroll (shadow + blur), active section underline animates.
+## 3. Send real emails (not mailto)
+The form will POST to a new server route `src/routes/api/public/contact.ts` that:
+- Validates input with Zod (name, email, phone, whatsapp bool, message; length limits).
+- Sends mail via **Gmail SMTP** using `nodemailer`:
+  - host `smtp.gmail.com`, port `465`, secure `true`
+  - user `fahadnomanofficial@gmail.com`, pass = `GMAIL_APP_PASSWORD` secret
+  - **To:** `fahadalnoman2001@gmail.com`
+  - **Subject:** `New Lead From Your Website`
+  - **Reply-To:** the submitter's email
+  - HTML + text body with name, email, phone, WhatsApp yes/no, message.
+- Returns `{ ok: true }` or a 4xx/5xx with a safe error message.
 
-All motion respects `prefers-reduced-motion` (disables loops and parallax, keeps fades).
+Frontend swaps the `mailto:` handler for a `fetch('/api/public/contact', …)` call with loading/success/error states (toast via existing `sonner`).
 
-## Visual system
+### Secrets
+I'll request **`GMAIL_APP_PASSWORD`** via the secrets tool so the app password is never in code or git. The Gmail address is not secret and stays as a constant.
 
-Tokens added to `src/styles.css` under `@theme`:
-- bg `#0B0E14`, surface `#11151D`, text `#F5F7FA`, muted `#A8B0BD`
-- accent teal `#22E0C7`, amber `#F2A65A`
-- gradient + glow tokens (`--shadow-glow`, `--gradient-accent`)
-- fonts: Space Grotesk (headings), Inter (body), JetBrains Mono (code/tags) — loaded via `<link>` in `__root.tsx`
+### Runtime note (important)
+The server runs on Cloudflare Workers (workerd) with `nodejs_compat`. `nodemailer` over SMTP **may not work** in that runtime because raw outbound TCP/TLS sockets to arbitrary hosts aren't reliably supported. If SMTP fails at runtime, the cleanest fix is one of:
+- **(A) Resend / SendGrid HTTP API** (recommended, 1-line swap, free tier covers this volume), or
+- **(B) Lovable Cloud's built-in email infrastructure** (requires enabling Cloud + a sender domain).
 
-shadcn button + card variants extended for the "glow" treatment. No hardcoded colors in components.
+I'll implement SMTP first as you specified and verify it in the deployed preview; if it errors, I'll come back and recommend switching to (A) or (B). No fallback `mailto` — failures will surface as a clear toast.
 
-## Page structure (single route `/`)
+## 4. Contact info — WhatsApp entry
+In the contact info list (left column) add a **WhatsApp** row with the same number `+356 9978 4477`, linking to `https://wa.me/35699784477` (opens WhatsApp), using the `MessageCircle` icon from lucide. Keep the existing Phone row.
 
-Sticky nav (FN logo, links: About · Services · Work · Skills · Certifications · Contact, Download CV button) with smooth-scroll + active-section highlight via IntersectionObserver.
+## Files touched
+- `src/assets/fahad.jpg.asset.json` (new — CDN pointer)
+- `src/components/portfolio/About.tsx` (add portrait, 2-column layout)
+- `src/components/portfolio/Contact.tsx` (phone + WhatsApp checkbox, fetch handler, WhatsApp info row)
+- `src/components/portfolio/data.ts` (add `whatsapp` URL constant)
+- `src/routes/api/public/contact.ts` (new — SMTP send via nodemailer)
+- `package.json` (add `nodemailer` + `@types/nodemailer`)
 
-1. **Hero** — eyebrow pill, H1, subhead, supporting line, primary CTAs (View My Work, Download CV), tertiary Get in Touch link, floating code-editor mockup with the `const developer = {...}` snippet.
-2. **About** — 2–3 paragraph bio from supplied content (Malta/Bangladesh, 5+ yrs, Sail Corp, education, Bangladesh Innovation Forum, AI-assisted dev).
-3. **Services** — 4 floating cards (Web Dev, Digital Marketing, App Dev, AI-Assisted Dev).
-4. **Experience** — vertical timeline with floating dot markers (Full Stack Dev, Frontend Dev, Freelance).
-5. **Featured Work** — grid of project cards (5 Sail + 7 freelance), each linking out (`target="_blank" rel="noreferrer"`), stack tags in JetBrains Mono.
-6. **Skills** — 4 grouped pill clusters (Web Dev, Digital Marketing, Infrastructure & Tools, Productivity).
-7. **Certifications** — 6 Coursera links as cards.
-8. **Contact** — heading, blurb, contact details, LinkedIn, form (Name/Email/Message) wired to `mailto:` with code comment about upgrading to Formspree/Resend, repeat Download CV.
-9. **Footer** — name, quick nav, email + LinkedIn icons, © 2026.
-
-## Files
-
-- `src/routes/__root.tsx` — add Google Fonts `<link>` tags, update default meta.
-- `src/routes/index.tsx` — set page title/description, render `<Portfolio />`.
-- `src/styles.css` — add design tokens, font family vars, glow/gradient utilities.
-- `src/components/portfolio/` — `Nav.tsx`, `Hero.tsx`, `About.tsx`, `Services.tsx`, `Experience.tsx`, `Work.tsx`, `Skills.tsx`, `Certifications.tsx`, `Contact.tsx`, `Footer.tsx`, `CodeMockup.tsx`, `FloatingOrbs.tsx`.
-- `src/components/portfolio/motion.ts` — shared variants + `useMagnetic`, `useFloat`, `useParallax` hooks.
-- `src/hooks/use-active-section.ts` — IntersectionObserver-based active nav state.
-- CV download points to `/Fahad_Al_Noman_CV.pdf` (placeholder; user uploads later).
-
-## Dependencies
-
-- `framer-motion` (install via bun add).
-
-## Content rules
-
-Only the supplied facts. No invented testimonials, logos, stats, or app-store claims. "App Development" presented as a service offering.
-
-## Out of scope (for now)
-
-- Real CV PDF (user uploads later).
-- Backend form handling (mailto only, upgrade noted in code comment).
-- Light mode.
+## Out of scope
+- No rate limiting (not a standard backend primitive here).
+- No captcha — can add hCaptcha later if spam appears.
