@@ -1,51 +1,103 @@
 
-# Plan: Photo, WhatsApp, and Email-sending Contact Form
+# My Community — Blog section + futuristic detail page
 
-## 1. Add your photo
-- Upload `download (2)0.png` to the CDN via `lovable-assets` → `src/assets/fahad.jpg.asset.json`.
-- Use it in the **About** section as a floating, rounded portrait (anti-gravity bob + subtle glow ring) on the left, bio text on the right. Keeps the hero's code mockup intact so the hero still reads as "developer".
+## 1. Content (hardcoded)
 
-## 2. Contact form — add phone + WhatsApp checkbox
-In `src/components/portfolio/Contact.tsx`:
-- Add a **Phone** input (required, with light validation).
-- Add a checkbox: **"This number is on WhatsApp"** (default checked).
-- Both fields included in the email payload sent to you.
+New file `src/components/portfolio/blogs.ts` exports 4 sample posts:
 
-## 3. Send real emails (not mailto)
-The form will POST to a new server route `src/routes/api/public/contact.ts` that:
-- Validates input with Zod (name, email, phone, whatsapp bool, message; length limits).
-- Sends mail via **Gmail SMTP** using `nodemailer`:
-  - host `smtp.gmail.com`, port `465`, secure `true`
-  - user `fahadnomanofficial@gmail.com`, pass = `GMAIL_APP_PASSWORD` secret
-  - **To:** `fahadalnoman2001@gmail.com`
-  - **Subject:** `New Lead From Your Website`
-  - **Reply-To:** the submitter's email
-  - HTML + text body with name, email, phone, WhatsApp yes/no, message.
-- Returns `{ ok: true }` or a 4xx/5xx with a safe error message.
+```ts
+type BlogPost = {
+  slug: string;        // URL segment
+  title: string;
+  excerpt: string;     // 1–2 lines, used on homepage card
+  cover: string;       // generated cover image
+  date: string;        // e.g. "Jun 20, 2026"
+  readMinutes: number;
+  tags: string[];
+  author: { name: "Fahad Al Noman"; avatar: <fahad.jpg asset> };
+  content: string;     // markdown body with ## headings (drives TOC)
+};
+```
 
-Frontend swaps the `mailto:` handler for a `fetch('/api/public/contact', …)` call with loading/success/error states (toast via existing `sonner`).
+I'll write 4 starter posts in Fahad's voice (topics: building Bonikbazar, SEO that drove 5M visits, vibe coding with AI, freelancing worldwide from Malta). Covers are generated images saved to `src/assets/blog/*.jpg`.
 
-### Secrets
-I'll request **`GMAIL_APP_PASSWORD`** via the secrets tool so the app password is never in code or git. The Gmail address is not secret and stays as a constant.
+## 2. Homepage "My Community" section
 
-### Runtime note (important)
-The server runs on Cloudflare Workers (workerd) with `nodejs_compat`. `nodemailer` over SMTP **may not work** in that runtime because raw outbound TCP/TLS sockets to arbitrary hosts aren't reliably supported. If SMTP fails at runtime, the cleanest fix is one of:
-- **(A) Resend / SendGrid HTTP API** (recommended, 1-line swap, free tier covers this volume), or
-- **(B) Lovable Cloud's built-in email infrastructure** (requires enabling Cloud + a sender domain).
+New `src/components/portfolio/Community.tsx`, mounted in `src/routes/index.tsx` **between Work and Skills** (per your answer).
 
-I'll implement SMTP first as you specified and verify it in the deployed preview; if it errors, I'll come back and recommend switching to (A) or (B). No fallback `mailto` — failures will surface as a clear toast.
+- Section title: **"My Community"** with eyebrow `▸ writing & ideas` and a tagline like *"Notes from building on the web — lessons, experiments, and the people I learn with."*
+- 4-card responsive grid (1 / 2 / 4 cols). Each card: cover image with subtle zoom-on-hover, date · read-time, title, 2-line excerpt, tag pills, "Read →" link.
+- Cards are `<Link to="/blog/$slug" params={{ slug }}>` (TanStack typed link).
+- Add `{ id: "community", label: "Community" }` to `NAV_LINKS` so it appears in the nav and active-section tracker.
 
-## 4. Contact info — WhatsApp entry
-In the contact info list (left column) add a **WhatsApp** row with the same number `+356 9978 4477`, linking to `https://wa.me/35699784477` (opens WhatsApp), using the `MessageCircle` icon from lucide. Keep the existing Phone row.
+## 3. Blog detail route — futuristic & lite
 
-## Files touched
-- `src/assets/fahad.jpg.asset.json` (new — CDN pointer)
-- `src/components/portfolio/About.tsx` (add portrait, 2-column layout)
-- `src/components/portfolio/Contact.tsx` (phone + WhatsApp checkbox, fetch handler, WhatsApp info row)
-- `src/components/portfolio/data.ts` (add `whatsapp` URL constant)
-- `src/routes/api/public/contact.ts` (new — SMTP send via nodemailer)
-- `package.json` (add `nodemailer` + `@types/nodemailer`)
+New file `src/routes/blog.$slug.tsx` with `head()` per-post (title, description, og:title/description/image = cover, JSON-LD `Article`).
+
+Layout (light, editorial, lots of whitespace; same dark theme tokens as the site, no new color system):
+
+```text
+[ sticky reading-progress bar — accent gradient, top of viewport ]
+[ <- back to community ]
+[ TAG · DATE · X min read ]
+[ H1 title ]
+[ author row: avatar + name + share buttons ]
+[ cover image — large, rounded, soft glow ]
+
+[ 2-column on desktop ]
+  [ left rail — sticky ]            [ article body — prose ]
+    • Auto TOC (scrolls to            Rendered from markdown
+      active heading)                 via `react-markdown` +
+    • Listen ▶ (TTS)                  `remark-gfm`. Headings
+    • Summarize ✨ (AI)               get ids for TOC anchors.
+    • Like ♥ count
+    • Comments count → scroll
+  [ on mobile: collapsible drawer ]
+
+[ AI panel (appears when Summarize or Ask is opened) ]
+  • TL;DR (3 bullets, streamed)
+  • "Ask about this post" chat input (streamed answers grounded in post content)
+
+[ Reactions bar — 👍 ❤️ 🔥 💡 — localStorage counts ]
+[ Comments — name + message, localStorage-persisted, newest first ]
+[ Share row — copy link, X/Twitter, LinkedIn, WhatsApp ]
+[ "More from My Community" — 3 other posts ]
+```
+
+### Futuristic features (your selections)
+- **Reading progress bar + TOC** — scroll-linked progress via framer-motion `useScroll`; TOC built from `##`/`###` headings with `IntersectionObserver` highlighting the active section.
+- **AI Summary & Q&A** — uses **Lovable AI Gateway** (`google/gemini-3-flash-preview`) via a new TanStack server function `src/lib/blog-ai.functions.ts` exposing `summarizePost({slug})` and `askPost({slug, question, history})`. Both stream back. The post body is loaded server-side from `blogs.ts` so the client never has to send the whole article.
+- **Text-to-speech** — new `src/routes/api/blog-tts.ts` (server route) proxies to Lovable AI `/v1/audio/speech` with `model: openai/gpt-4o-mini-tts`, voice `alloy`, SSE + PCM streaming. The "Listen" button on the detail page plays it back via Web Audio (chunked, with play/pause). The post body is chunked at sentence boundaries so long posts work.
+- **Likes + comments + share** — likes and comments are stored in `localStorage` (keyed by slug) so it's instant and needs no backend. Share buttons use the Web Share API where available with a copy-link fallback and direct intent URLs for X/LinkedIn/WhatsApp.
+
+## 4. SEO
+
+- Homepage `head()` keeps its current meta; the Community section adds `BlogPosting` items inside a `Blog` JSON-LD block referencing the 4 posts.
+- Each post route sets its own `<title>`, meta description, canonical, og:image (the cover), and `Article` JSON-LD with author = Fahad Al Noman.
+
+## 5. Files
+
+New:
+- `src/components/portfolio/blogs.ts` — posts data + helpers (`getPost(slug)`, `allPosts()`).
+- `src/components/portfolio/Community.tsx` — homepage section.
+- `src/components/portfolio/BlogCard.tsx` — reusable card.
+- `src/routes/blog.$slug.tsx` — detail page (+ `head()`, `notFoundComponent`, `errorComponent`).
+- `src/lib/blog-ai.functions.ts` — `summarizePost`, `askPost` server functions (AI SDK + Lovable Gateway, streamed via `toUIMessageStreamResponse`-style or simple text stream).
+- `src/routes/api/blog-tts.ts` — TTS SSE proxy server route.
+- `src/assets/blog/*.jpg` — 4 generated cover images (one per post).
+
+Edited:
+- `src/routes/index.tsx` — import and mount `<Community />` between `<Work />` and `<Skills />`.
+- `src/components/portfolio/data.ts` — add `{ id: "community", label: "Community" }` to `NAV_LINKS`.
+
+## 6. Dependencies
+
+`bun add ai @ai-sdk/openai-compatible react-markdown remark-gfm eventsource-parser`
+
+(No new fonts. Reuses existing design tokens — no new colors, no purple gradients, stays on the site's current dark editorial palette.)
 
 ## Out of scope
-- No rate limiting (not a standard backend primitive here).
-- No captcha — can add hCaptcha later if spam appears.
+
+- No CMS/admin UI (hardcoded as you chose).
+- No persistent comments DB (localStorage only — switch to Lovable Cloud later if you want real comments across devices).
+- No new auth — Q&A and TTS endpoints are public, with input length capped server-side.
