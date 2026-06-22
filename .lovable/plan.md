@@ -1,70 +1,77 @@
-## What we're changing
+## What we're building
 
-Two things at once, scoped tightly to design + content:
+A self-contained admin area at `/admin` with a login gate and a dashboard that mirrors every field/feature the public blog already has. Per your choice, this is a **UI-only mockup** — the editor is fully functional in the browser, but new/edited posts are NOT persisted to `blogs.ts` or a database (a static TS file can't be written at runtime). Posts created in admin live in component state for the session and can be exported as JSON/Markdown so you can paste them into `blogs.ts` manually.
 
-1. **Whole site → light, professional editorial palette.** Re-tone the existing portfolio (Hero, About, Work, Skills, Services, Experience, Certifications, Community, Contact, Footer, Nav) from the current dark surface to a refined light scheme. No layout, copy, or feature changes outside the blog detail page.
-2. **Blog detail page → magazine-style, section-wise reading experience** with bigger type, a unique image per H2 section, and a polished light theme.
+No changes to the public site behavior, blog detail page design, or existing 4 posts.
 
-The blog detail page's existing functionality stays intact: TOC + reading progress, AI summary & Q&A, text‑to‑speech, likes/reactions/comments, share. Only the visuals, typography scale, and content/image structure change.
+## Routes & files
 
-## Visual direction
+- `src/routes/admin.tsx` — pathless admin layout: checks `sessionStorage` for an admin flag, renders `<AdminLogin />` if missing, otherwise renders the admin shell + `<Outlet />`.
+- `src/routes/admin.index.tsx` — redirects to `/admin/dashboard`.
+- `src/routes/admin.dashboard.tsx` — overview cards: total posts, drafts, published, total reactions (read from localStorage), total comments (read from localStorage), recent activity list.
+- `src/routes/admin.blogs.tsx` — table of all posts (title, slug, status, date, tags, reactions, comments) with row actions: Edit, Preview, Duplicate, Delete, Toggle publish. "New Post" button opens the editor.
+- `src/routes/admin.blogs.new.tsx` and `src/routes/admin.blogs.$slug.edit.tsx` — full blog editor (see fields below).
+- `src/routes/admin.reactions.tsx` — read-only table per post: 👍 ❤️ 🔥 🙌 counts (sourced from `localStorage` keys the public page already writes).
+- `src/routes/admin.comments.tsx` — read-only list grouped by post with delete button (clears from localStorage).
+- `src/routes/admin.seo.tsx` — per-post SEO overview: meta title length meter, meta description length meter, OG image presence, canonical URL, keywords, warnings (missing alt text, title > 60 chars, description > 160 chars).
+- `src/components/admin/AdminLogin.tsx` — email + password form, compares against hardcoded `fahadnomanofficial@gmail.com` / `Fahad@0210`, sets `sessionStorage["lovable_admin"] = "1"` on success.
+- `src/components/admin/AdminShell.tsx` — sidebar nav (Dashboard, Blogs, Reactions, Comments, SEO, Sign out) + top bar.
+- `src/components/admin/BlogEditor.tsx` — the form (split into tabs: Content / Sections / SEO / Publishing / Author).
+- `src/components/admin/blog-storage.ts` — in-memory + sessionStorage store seeded from `blogs.ts`; exposes `listPosts / getPost / upsertPost / deletePost / exportAll`.
 
-Editorial light theme inspired by Stripe Press / The Verge long-reads / Linear's docs:
+## Blog editor fields (all tabs)
 
-- Background: warm off-white `oklch(0.985 0.005 85)` with a true-white `surface` for cards.
-- Foreground: near-black `oklch(0.18 0.01 260)` for body, soft graphite for muted.
-- Accent: a single confident accent — deep editorial indigo `oklch(0.42 0.18 265)` — plus a warm secondary `oklch(0.62 0.16 50)` (amber) for tags and highlights.
-- Borders: hairline `oklch(0.92 0.005 85)`.
-- Shadows: soft, low-spread `0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.08)`.
-- Typography: keep the project's display/body pair but bump the article scale — body `19px / 1.75`, H2 `clamp(28px, 3.2vw, 40px)`, H3 `clamp(22px, 2.2vw, 28px)`, drop cap on first paragraph, generous 96px vertical rhythm between sections.
+**Content tab** — title, slug (auto from title, editable), excerpt, cover image (URL or upload-to-data-URL), tags (chips), markdown content (textarea with live preview pane), read time (auto-calculated, editable).
 
-All values written as semantic tokens in `src/styles.css` — no hard-coded colors in components.
+**Sections tab** — repeatable list matching today's `sections: { heading, image, alt }[]` shape. Each row: heading text, image URL/upload, alt text, drag-to-reorder.
 
-## Section-wise content + images
+**SEO tab** — meta title, meta description, OG image, canonical URL, keywords (chips), `noindex` toggle. Inline length meters and warnings.
 
-For each of the 4 posts in `src/components/portfolio/blogs.ts`:
+**Publishing tab** — status (draft/published) toggle, publish date picker, featured toggle, order/weight.
 
-- Keep the existing H2 sections (each post already has 3–4 H2s) and **expand the prose** under each by ~40–60% so the article feels substantial and professional (no fluff — concrete examples, numbers, anecdotes consistent with the post's voice).
-- Add a `sections` field to `BlogPost`: an array of `{ heading, image, alt }`. The renderer matches each H2 in the markdown to its image and renders the image as a full-bleed figure directly under the heading.
-- **Generate one unique 16:9 image per H2 section** (≈ 4 posts × 4 sections ≈ 16 images) saved under `src/assets/blog/<slug>/<section-slug>.jpg`. Style brief per image stays editorial: muted color grading, soft natural light, subject matter literal to the section (e.g. "Cache the right thing" → a clean shot of a server rack with warm overhead light; "Time zones are a feature" → a sunlit Maltese desk at dawn with a laptop). No stock-photo vibes, no AI clichés.
+**Author tab** — author name, avatar URL, bio override (defaults to site author).
 
-## Detail page rebuild
+Footer actions: Save (writes to in-memory store + sessionStorage), Preview (opens `/blog/<slug>` in a new tab using the in-memory post), Export JSON, Export Markdown (downloads `.md` with frontmatter), Delete.
 
-Rewrite `src/routes/blog.$slug.tsx` presentation layer:
+## Auth (hardcoded, UI-only)
 
-- **Hero block**: small back link, tags row, oversized H1, byline with avatar + read time, then the cover image as a wide editorial figure with caption.
-- **Two-column shell** on `lg+`: left rail (sticky TOC + reading progress), center column (article, max width ~720px for readability), right rail (sticky action card: Listen, Summarize, Ask AI, Like, Share).
-- **Article body**: render markdown so every H2 is preceded by a numbered chapter eyebrow ("01 — Start with the boring schema"), followed by the section's generated image as a `<figure>` with caption, then the prose. Drop cap on the first paragraph of each section. Pull-quotes auto-extracted from `> blockquote` markdown.
-- **Section dividers**: thin rule + section count, so the page reads as chapters.
-- **End-of-article card**: author bio, reactions row, comment thread, "More from My Community" grid — all re-skinned to the light palette.
-- AI panel + TTS controls move into the right rail action card; floating mobile bar on `< lg`.
+- Credentials: `fahadnomanofficial@gmail.com` / `Fahad@0210` (string-compared client-side).
+- Session flag: `sessionStorage["lovable_admin"] = "1"` — cleared on Sign out and on tab close.
+- No route-level redirects, no SSR auth, no backend. The whole admin tree is rendered client-side after the flag check.
 
-## Technical details
+**Security note (must be said):** since the password is hardcoded in the client bundle, anyone who views the JS can read it. This matches your "UI-only mockup" choice. When you're ready for a real admin, switch to Lovable Cloud auth + a `user_roles` admin role.
 
-Files touched:
+## Persistence behavior
 
-- `src/styles.css` — flip token values to the light editorial palette; add `--font-size-article`, `--leading-article`, `--shadow-editorial`, `--gradient-accent` tokens.
-- `src/components/portfolio/blogs.ts` — add `sections: { heading, image, alt }[]` to `BlogPost`, expand each post's `content`, import the new section images.
-- `src/components/portfolio/{Hero,About,Work,Skills,Services,Experience,Certifications,Community,Contact,Footer,Nav,BlogCard}.tsx` — swap any hard-coded dark utilities for semantic tokens; tune contrast for the light theme. No structural changes.
-- `src/routes/blog.$slug.tsx` — full presentation rewrite as described; logic (AI fetch, TTS, comments, likes, share) stays unchanged.
-- `src/assets/blog/<slug>/*.jpg` — ~16 new generated section images via the agent-side image tool.
-- `src/components/portfolio/FloatingOrbs.tsx` — soften or replace with a subtle paper-grain texture so the orbs don't fight the light palette.
-
-No new dependencies. No backend changes. No changes to `src/routes/api/blog-ai.ts` or `src/routes/api/blog-tts.ts`.
+- On first admin load, the store is seeded from the existing `blogs.ts` array.
+- Edits/new posts live in `sessionStorage["lovable_admin_posts"]` so they survive page reloads within the tab.
+- The public site (`/blog/:slug`, homepage Community section) continues to read from `blogs.ts` and is **not** affected by admin edits — this is the consequence of the static-file choice.
+- "Export" buttons let you copy the JSON/Markdown for a post and paste into `blogs.ts` manually to actually publish it.
+- Reactions and comments shown in admin are read from the same localStorage keys the public detail page already writes (`blog-likes-<slug>`, `blog-comments-<slug>`, etc.) — no migration, no new schema.
 
 ## Out of scope
 
-- Real comments backend (still localStorage).
-- New posts or changing the 4 existing topics.
-- Dark-mode toggle (site becomes light-only this pass; can add a toggle later if you want).
+- No database, no Lovable Cloud, no email/password reset, no multi-user, no real role system.
+- No changes to public blog rendering or styling.
+- No image uploads to a CDN — images use URLs or in-browser data URLs only.
+- No automated write-back to `blogs.ts` (impossible at runtime; export is the workaround).
+
+## Technical notes
+
+- All admin routes live under `/admin` and reuse the existing light editorial theme tokens.
+- New shadcn primitives used: existing `Tabs`, `Table`, `Dialog`, `Form`, `Input`, `Textarea`, `Switch`, `Badge`, `Button`. No new dependencies.
+- `BlogPost` type in `src/components/portfolio/blogs.ts` gets optional fields added (`status?`, `featured?`, `seo?: { metaTitle?, metaDescription?, ogImage?, canonical?, keywords?, noindex? }`, `author?: { name?, avatar?, bio? }`) — all optional so existing 4 posts and their renderer keep working unchanged.
+- Markdown export uses simple YAML frontmatter; no new libs.
 
 ```text
-Detail page (lg+)
-┌─ TOC ──┬──────── ARTICLE ────────┬── ACTIONS ──┐
-│ 01 …   │  Hero, cover, byline    │  Listen     │
-│ 02 …   │  ── 01 Chapter ──       │  Summarize  │
-│ 03 …   │  [section image]        │  Ask AI     │
-│ 04 …   │  drop-cap prose…        │  Like  ♥    │
-│ progress│  ── 02 Chapter ──      │  Share      │
-└────────┴─────────────────────────┴─────────────┘
+/admin
+ ├── (not logged in) → AdminLogin
+ └── (logged in)
+     ├── /admin/dashboard      stats overview
+     ├── /admin/blogs          table + New Post
+     │    ├── /new             editor
+     │    └── /:slug/edit      editor
+     ├── /admin/reactions      read-only counts
+     ├── /admin/comments       read-only + delete
+     └── /admin/seo            per-post SEO audit
 ```

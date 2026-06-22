@@ -9,16 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ApiBlogTtsRouteImport } from './routes/api/blog-tts'
 import { Route as ApiBlogAiRouteImport } from './routes/api/blog-ai'
+import { Route as AdminSeoRouteImport } from './routes/admin.seo'
+import { Route as AdminReactionsRouteImport } from './routes/admin.reactions'
+import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
+import { Route as AdminCommentsRouteImport } from './routes/admin.comments'
+import { Route as AdminBlogsRouteImport } from './routes/admin.blogs'
 import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
+import { Route as AdminBlogsNewRouteImport } from './routes/admin.blogs.new'
+import { Route as AdminBlogsSlugEditRouteImport } from './routes/admin.blogs.$slug.edit'
 
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
@@ -35,60 +54,148 @@ const ApiBlogAiRoute = ApiBlogAiRouteImport.update({
   path: '/api/blog-ai',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSeoRoute = AdminSeoRouteImport.update({
+  id: '/seo',
+  path: '/seo',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReactionsRoute = AdminReactionsRouteImport.update({
+  id: '/reactions',
+  path: '/reactions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDashboardRoute = AdminDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCommentsRoute = AdminCommentsRouteImport.update({
+  id: '/comments',
+  path: '/comments',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBlogsRoute = AdminBlogsRouteImport.update({
+  id: '/blogs',
+  path: '/blogs',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
   id: '/api/public/contact',
   path: '/api/public/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminBlogsNewRoute = AdminBlogsNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminBlogsRoute,
+} as any)
+const AdminBlogsSlugEditRoute = AdminBlogsSlugEditRouteImport.update({
+  id: '/$slug/edit',
+  path: '/$slug/edit',
+  getParentRoute: () => AdminBlogsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/blogs': typeof AdminBlogsRouteWithChildren
+  '/admin/comments': typeof AdminCommentsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/reactions': typeof AdminReactionsRoute
+  '/admin/seo': typeof AdminSeoRoute
   '/api/blog-ai': typeof ApiBlogAiRoute
   '/api/blog-tts': typeof ApiBlogTtsRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/api/public/contact': typeof ApiPublicContactRoute
+  '/admin/blogs/$slug/edit': typeof AdminBlogsSlugEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin/blogs': typeof AdminBlogsRouteWithChildren
+  '/admin/comments': typeof AdminCommentsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/reactions': typeof AdminReactionsRoute
+  '/admin/seo': typeof AdminSeoRoute
   '/api/blog-ai': typeof ApiBlogAiRoute
   '/api/blog-tts': typeof ApiBlogTtsRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/api/public/contact': typeof ApiPublicContactRoute
+  '/admin/blogs/$slug/edit': typeof AdminBlogsSlugEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/admin/blogs': typeof AdminBlogsRouteWithChildren
+  '/admin/comments': typeof AdminCommentsRoute
+  '/admin/dashboard': typeof AdminDashboardRoute
+  '/admin/reactions': typeof AdminReactionsRoute
+  '/admin/seo': typeof AdminSeoRoute
   '/api/blog-ai': typeof ApiBlogAiRoute
   '/api/blog-tts': typeof ApiBlogTtsRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/blogs/new': typeof AdminBlogsNewRoute
   '/api/public/contact': typeof ApiPublicContactRoute
+  '/admin/blogs/$slug/edit': typeof AdminBlogsSlugEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
+    | '/admin/blogs'
+    | '/admin/comments'
+    | '/admin/dashboard'
+    | '/admin/reactions'
+    | '/admin/seo'
     | '/api/blog-ai'
     | '/api/blog-tts'
     | '/blog/$slug'
+    | '/admin/'
+    | '/admin/blogs/new'
     | '/api/public/contact'
+    | '/admin/blogs/$slug/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin/blogs'
+    | '/admin/comments'
+    | '/admin/dashboard'
+    | '/admin/reactions'
+    | '/admin/seo'
     | '/api/blog-ai'
     | '/api/blog-tts'
     | '/blog/$slug'
+    | '/admin'
+    | '/admin/blogs/new'
     | '/api/public/contact'
+    | '/admin/blogs/$slug/edit'
   id:
     | '__root__'
     | '/'
+    | '/admin'
+    | '/admin/blogs'
+    | '/admin/comments'
+    | '/admin/dashboard'
+    | '/admin/reactions'
+    | '/admin/seo'
     | '/api/blog-ai'
     | '/api/blog-tts'
     | '/blog/$slug'
+    | '/admin/'
+    | '/admin/blogs/new'
     | '/api/public/contact'
+    | '/admin/blogs/$slug/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   ApiBlogAiRoute: typeof ApiBlogAiRoute
   ApiBlogTtsRoute: typeof ApiBlogTtsRoute
   BlogSlugRoute: typeof BlogSlugRoute
@@ -97,12 +204,26 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/blog/$slug': {
       id: '/blog/$slug'
@@ -125,6 +246,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBlogAiRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/seo': {
+      id: '/admin/seo'
+      path: '/seo'
+      fullPath: '/admin/seo'
+      preLoaderRoute: typeof AdminSeoRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reactions': {
+      id: '/admin/reactions'
+      path: '/reactions'
+      fullPath: '/admin/reactions'
+      preLoaderRoute: typeof AdminReactionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/dashboard': {
+      id: '/admin/dashboard'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/comments': {
+      id: '/admin/comments'
+      path: '/comments'
+      fullPath: '/admin/comments'
+      preLoaderRoute: typeof AdminCommentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/blogs': {
+      id: '/admin/blogs'
+      path: '/blogs'
+      fullPath: '/admin/blogs'
+      preLoaderRoute: typeof AdminBlogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/public/contact': {
       id: '/api/public/contact'
       path: '/api/public/contact'
@@ -132,11 +288,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/blogs/new': {
+      id: '/admin/blogs/new'
+      path: '/new'
+      fullPath: '/admin/blogs/new'
+      preLoaderRoute: typeof AdminBlogsNewRouteImport
+      parentRoute: typeof AdminBlogsRoute
+    }
+    '/admin/blogs/$slug/edit': {
+      id: '/admin/blogs/$slug/edit'
+      path: '/$slug/edit'
+      fullPath: '/admin/blogs/$slug/edit'
+      preLoaderRoute: typeof AdminBlogsSlugEditRouteImport
+      parentRoute: typeof AdminBlogsRoute
+    }
   }
 }
 
+interface AdminBlogsRouteChildren {
+  AdminBlogsNewRoute: typeof AdminBlogsNewRoute
+  AdminBlogsSlugEditRoute: typeof AdminBlogsSlugEditRoute
+}
+
+const AdminBlogsRouteChildren: AdminBlogsRouteChildren = {
+  AdminBlogsNewRoute: AdminBlogsNewRoute,
+  AdminBlogsSlugEditRoute: AdminBlogsSlugEditRoute,
+}
+
+const AdminBlogsRouteWithChildren = AdminBlogsRoute._addFileChildren(
+  AdminBlogsRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminBlogsRoute: typeof AdminBlogsRouteWithChildren
+  AdminCommentsRoute: typeof AdminCommentsRoute
+  AdminDashboardRoute: typeof AdminDashboardRoute
+  AdminReactionsRoute: typeof AdminReactionsRoute
+  AdminSeoRoute: typeof AdminSeoRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminBlogsRoute: AdminBlogsRouteWithChildren,
+  AdminCommentsRoute: AdminCommentsRoute,
+  AdminDashboardRoute: AdminDashboardRoute,
+  AdminReactionsRoute: AdminReactionsRoute,
+  AdminSeoRoute: AdminSeoRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   ApiBlogAiRoute: ApiBlogAiRoute,
   ApiBlogTtsRoute: ApiBlogTtsRoute,
   BlogSlugRoute: BlogSlugRoute,
