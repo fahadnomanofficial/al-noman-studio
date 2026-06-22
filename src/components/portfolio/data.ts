@@ -2,6 +2,7 @@ export const NAV_LINKS = [
   { id: "about", label: "About" },
   { id: "services", label: "Services" },
   { id: "work", label: "Work" },
+  { id: "community", label: "Community" },
   { id: "skills", label: "Skills" },
   { id: "certifications", label: "Certifications" },
   { id: "contact", label: "Contact" },
