@@ -16,25 +16,25 @@ export function FloatingOrbs() {
 
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden -z-10">
-      <div className="absolute inset-0 bg-grid opacity-[0.35]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(34,224,199,0.10),transparent_55%)]" />
+      <div className="absolute inset-0 bg-grid opacity-[0.4]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--accent)_8%,transparent),transparent_55%)]" />
       <motion.div
         style={{ y: y1, x: px1, translateY: py1 }}
-        className="absolute -top-20 -left-32 h-[420px] w-[420px] rounded-full blur-[120px] opacity-50"
+        className="absolute -top-20 -left-32 h-[420px] w-[420px] rounded-full opacity-60 blur-[120px]"
       >
-        <div className="h-full w-full rounded-full bg-[#22E0C7]/40" />
+        <div className="h-full w-full rounded-full bg-accent/20" />
       </motion.div>
       <motion.div
         style={{ y: y2, x: px2, translateY: py2 }}
-        className="absolute top-[40%] -right-40 h-[480px] w-[480px] rounded-full blur-[140px] opacity-40"
+        className="absolute top-[40%] -right-40 h-[480px] w-[480px] rounded-full opacity-50 blur-[140px]"
       >
-        <div className="h-full w-full rounded-full bg-[#F2A65A]/30" />
+        <div className="h-full w-full rounded-full bg-amber/20" />
       </motion.div>
       <motion.div
         style={{ y: y3 }}
-        className="absolute bottom-0 left-1/3 h-[360px] w-[360px] rounded-full blur-[120px] opacity-30"
+        className="absolute bottom-0 left-1/3 h-[360px] w-[360px] rounded-full opacity-40 blur-[120px]"
       >
-        <div className="h-full w-full rounded-full bg-[#22E0C7]/25" />
+        <div className="h-full w-full rounded-full bg-accent/15" />
       </motion.div>
     </div>
   );

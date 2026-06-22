@@ -1,103 +1,70 @@
+## What we're changing
 
-# My Community — Blog section + futuristic detail page
+Two things at once, scoped tightly to design + content:
 
-## 1. Content (hardcoded)
+1. **Whole site → light, professional editorial palette.** Re-tone the existing portfolio (Hero, About, Work, Skills, Services, Experience, Certifications, Community, Contact, Footer, Nav) from the current dark surface to a refined light scheme. No layout, copy, or feature changes outside the blog detail page.
+2. **Blog detail page → magazine-style, section-wise reading experience** with bigger type, a unique image per H2 section, and a polished light theme.
 
-New file `src/components/portfolio/blogs.ts` exports 4 sample posts:
+The blog detail page's existing functionality stays intact: TOC + reading progress, AI summary & Q&A, text‑to‑speech, likes/reactions/comments, share. Only the visuals, typography scale, and content/image structure change.
 
-```ts
-type BlogPost = {
-  slug: string;        // URL segment
-  title: string;
-  excerpt: string;     // 1–2 lines, used on homepage card
-  cover: string;       // generated cover image
-  date: string;        // e.g. "Jun 20, 2026"
-  readMinutes: number;
-  tags: string[];
-  author: { name: "Fahad Al Noman"; avatar: <fahad.jpg asset> };
-  content: string;     // markdown body with ## headings (drives TOC)
-};
-```
+## Visual direction
 
-I'll write 4 starter posts in Fahad's voice (topics: building Bonikbazar, SEO that drove 5M visits, vibe coding with AI, freelancing worldwide from Malta). Covers are generated images saved to `src/assets/blog/*.jpg`.
+Editorial light theme inspired by Stripe Press / The Verge long-reads / Linear's docs:
 
-## 2. Homepage "My Community" section
+- Background: warm off-white `oklch(0.985 0.005 85)` with a true-white `surface` for cards.
+- Foreground: near-black `oklch(0.18 0.01 260)` for body, soft graphite for muted.
+- Accent: a single confident accent — deep editorial indigo `oklch(0.42 0.18 265)` — plus a warm secondary `oklch(0.62 0.16 50)` (amber) for tags and highlights.
+- Borders: hairline `oklch(0.92 0.005 85)`.
+- Shadows: soft, low-spread `0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.08)`.
+- Typography: keep the project's display/body pair but bump the article scale — body `19px / 1.75`, H2 `clamp(28px, 3.2vw, 40px)`, H3 `clamp(22px, 2.2vw, 28px)`, drop cap on first paragraph, generous 96px vertical rhythm between sections.
 
-New `src/components/portfolio/Community.tsx`, mounted in `src/routes/index.tsx` **between Work and Skills** (per your answer).
+All values written as semantic tokens in `src/styles.css` — no hard-coded colors in components.
 
-- Section title: **"My Community"** with eyebrow `▸ writing & ideas` and a tagline like *"Notes from building on the web — lessons, experiments, and the people I learn with."*
-- 4-card responsive grid (1 / 2 / 4 cols). Each card: cover image with subtle zoom-on-hover, date · read-time, title, 2-line excerpt, tag pills, "Read →" link.
-- Cards are `<Link to="/blog/$slug" params={{ slug }}>` (TanStack typed link).
-- Add `{ id: "community", label: "Community" }` to `NAV_LINKS` so it appears in the nav and active-section tracker.
+## Section-wise content + images
 
-## 3. Blog detail route — futuristic & lite
+For each of the 4 posts in `src/components/portfolio/blogs.ts`:
 
-New file `src/routes/blog.$slug.tsx` with `head()` per-post (title, description, og:title/description/image = cover, JSON-LD `Article`).
+- Keep the existing H2 sections (each post already has 3–4 H2s) and **expand the prose** under each by ~40–60% so the article feels substantial and professional (no fluff — concrete examples, numbers, anecdotes consistent with the post's voice).
+- Add a `sections` field to `BlogPost`: an array of `{ heading, image, alt }`. The renderer matches each H2 in the markdown to its image and renders the image as a full-bleed figure directly under the heading.
+- **Generate one unique 16:9 image per H2 section** (≈ 4 posts × 4 sections ≈ 16 images) saved under `src/assets/blog/<slug>/<section-slug>.jpg`. Style brief per image stays editorial: muted color grading, soft natural light, subject matter literal to the section (e.g. "Cache the right thing" → a clean shot of a server rack with warm overhead light; "Time zones are a feature" → a sunlit Maltese desk at dawn with a laptop). No stock-photo vibes, no AI clichés.
 
-Layout (light, editorial, lots of whitespace; same dark theme tokens as the site, no new color system):
+## Detail page rebuild
 
-```text
-[ sticky reading-progress bar — accent gradient, top of viewport ]
-[ <- back to community ]
-[ TAG · DATE · X min read ]
-[ H1 title ]
-[ author row: avatar + name + share buttons ]
-[ cover image — large, rounded, soft glow ]
+Rewrite `src/routes/blog.$slug.tsx` presentation layer:
 
-[ 2-column on desktop ]
-  [ left rail — sticky ]            [ article body — prose ]
-    • Auto TOC (scrolls to            Rendered from markdown
-      active heading)                 via `react-markdown` +
-    • Listen ▶ (TTS)                  `remark-gfm`. Headings
-    • Summarize ✨ (AI)               get ids for TOC anchors.
-    • Like ♥ count
-    • Comments count → scroll
-  [ on mobile: collapsible drawer ]
+- **Hero block**: small back link, tags row, oversized H1, byline with avatar + read time, then the cover image as a wide editorial figure with caption.
+- **Two-column shell** on `lg+`: left rail (sticky TOC + reading progress), center column (article, max width ~720px for readability), right rail (sticky action card: Listen, Summarize, Ask AI, Like, Share).
+- **Article body**: render markdown so every H2 is preceded by a numbered chapter eyebrow ("01 — Start with the boring schema"), followed by the section's generated image as a `<figure>` with caption, then the prose. Drop cap on the first paragraph of each section. Pull-quotes auto-extracted from `> blockquote` markdown.
+- **Section dividers**: thin rule + section count, so the page reads as chapters.
+- **End-of-article card**: author bio, reactions row, comment thread, "More from My Community" grid — all re-skinned to the light palette.
+- AI panel + TTS controls move into the right rail action card; floating mobile bar on `< lg`.
 
-[ AI panel (appears when Summarize or Ask is opened) ]
-  • TL;DR (3 bullets, streamed)
-  • "Ask about this post" chat input (streamed answers grounded in post content)
+## Technical details
 
-[ Reactions bar — 👍 ❤️ 🔥 💡 — localStorage counts ]
-[ Comments — name + message, localStorage-persisted, newest first ]
-[ Share row — copy link, X/Twitter, LinkedIn, WhatsApp ]
-[ "More from My Community" — 3 other posts ]
-```
+Files touched:
 
-### Futuristic features (your selections)
-- **Reading progress bar + TOC** — scroll-linked progress via framer-motion `useScroll`; TOC built from `##`/`###` headings with `IntersectionObserver` highlighting the active section.
-- **AI Summary & Q&A** — uses **Lovable AI Gateway** (`google/gemini-3-flash-preview`) via a new TanStack server function `src/lib/blog-ai.functions.ts` exposing `summarizePost({slug})` and `askPost({slug, question, history})`. Both stream back. The post body is loaded server-side from `blogs.ts` so the client never has to send the whole article.
-- **Text-to-speech** — new `src/routes/api/blog-tts.ts` (server route) proxies to Lovable AI `/v1/audio/speech` with `model: openai/gpt-4o-mini-tts`, voice `alloy`, SSE + PCM streaming. The "Listen" button on the detail page plays it back via Web Audio (chunked, with play/pause). The post body is chunked at sentence boundaries so long posts work.
-- **Likes + comments + share** — likes and comments are stored in `localStorage` (keyed by slug) so it's instant and needs no backend. Share buttons use the Web Share API where available with a copy-link fallback and direct intent URLs for X/LinkedIn/WhatsApp.
+- `src/styles.css` — flip token values to the light editorial palette; add `--font-size-article`, `--leading-article`, `--shadow-editorial`, `--gradient-accent` tokens.
+- `src/components/portfolio/blogs.ts` — add `sections: { heading, image, alt }[]` to `BlogPost`, expand each post's `content`, import the new section images.
+- `src/components/portfolio/{Hero,About,Work,Skills,Services,Experience,Certifications,Community,Contact,Footer,Nav,BlogCard}.tsx` — swap any hard-coded dark utilities for semantic tokens; tune contrast for the light theme. No structural changes.
+- `src/routes/blog.$slug.tsx` — full presentation rewrite as described; logic (AI fetch, TTS, comments, likes, share) stays unchanged.
+- `src/assets/blog/<slug>/*.jpg` — ~16 new generated section images via the agent-side image tool.
+- `src/components/portfolio/FloatingOrbs.tsx` — soften or replace with a subtle paper-grain texture so the orbs don't fight the light palette.
 
-## 4. SEO
-
-- Homepage `head()` keeps its current meta; the Community section adds `BlogPosting` items inside a `Blog` JSON-LD block referencing the 4 posts.
-- Each post route sets its own `<title>`, meta description, canonical, og:image (the cover), and `Article` JSON-LD with author = Fahad Al Noman.
-
-## 5. Files
-
-New:
-- `src/components/portfolio/blogs.ts` — posts data + helpers (`getPost(slug)`, `allPosts()`).
-- `src/components/portfolio/Community.tsx` — homepage section.
-- `src/components/portfolio/BlogCard.tsx` — reusable card.
-- `src/routes/blog.$slug.tsx` — detail page (+ `head()`, `notFoundComponent`, `errorComponent`).
-- `src/lib/blog-ai.functions.ts` — `summarizePost`, `askPost` server functions (AI SDK + Lovable Gateway, streamed via `toUIMessageStreamResponse`-style or simple text stream).
-- `src/routes/api/blog-tts.ts` — TTS SSE proxy server route.
-- `src/assets/blog/*.jpg` — 4 generated cover images (one per post).
-
-Edited:
-- `src/routes/index.tsx` — import and mount `<Community />` between `<Work />` and `<Skills />`.
-- `src/components/portfolio/data.ts` — add `{ id: "community", label: "Community" }` to `NAV_LINKS`.
-
-## 6. Dependencies
-
-`bun add ai @ai-sdk/openai-compatible react-markdown remark-gfm eventsource-parser`
-
-(No new fonts. Reuses existing design tokens — no new colors, no purple gradients, stays on the site's current dark editorial palette.)
+No new dependencies. No backend changes. No changes to `src/routes/api/blog-ai.ts` or `src/routes/api/blog-tts.ts`.
 
 ## Out of scope
 
-- No CMS/admin UI (hardcoded as you chose).
-- No persistent comments DB (localStorage only — switch to Lovable Cloud later if you want real comments across devices).
-- No new auth — Q&A and TTS endpoints are public, with input length capped server-side.
+- Real comments backend (still localStorage).
+- New posts or changing the 4 existing topics.
+- Dark-mode toggle (site becomes light-only this pass; can add a toggle later if you want).
+
+```text
+Detail page (lg+)
+┌─ TOC ──┬──────── ARTICLE ────────┬── ACTIONS ──┐
+│ 01 …   │  Hero, cover, byline    │  Listen     │
+│ 02 …   │  ── 01 Chapter ──       │  Summarize  │
+│ 03 …   │  [section image]        │  Ask AI     │
+│ 04 …   │  drop-cap prose…        │  Like  ♥    │
+│ progress│  ── 02 Chapter ──      │  Share      │
+└────────┴─────────────────────────┴─────────────┘
+```
