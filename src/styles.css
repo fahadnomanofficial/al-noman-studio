@@ -37,41 +37,44 @@
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", "Sora", ui-sans-serif, sans-serif;
+  --font-serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
-  --shadow-glow: 0 0 40px -10px color-mix(in oklab, var(--accent) 55%, transparent);
-  --shadow-glow-sm: 0 0 18px -6px color-mix(in oklab, var(--accent) 45%, transparent);
+  --shadow-glow: 0 1px 2px rgba(15,23,42,.04), 0 24px 60px -28px rgba(30,41,99,.18);
+  --shadow-glow-sm: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(30,41,99,.10);
+  --shadow-editorial: 0 1px 2px rgba(15,23,42,.04), 0 30px 80px -40px rgba(30,41,99,.22);
 }
 
 :root {
   --radius: 0.875rem;
 
-  --background: #0B0E14;
-  --foreground: #F5F7FA;
-  --surface: #11151D;
-  --surface-2: #161B26;
+  /* Editorial light palette */
+  --background: oklch(0.985 0.005 85);
+  --foreground: oklch(0.18 0.015 265);
+  --surface: #ffffff;
+  --surface-2: oklch(0.965 0.008 85);
 
-  --card: #11151D;
-  --card-foreground: #F5F7FA;
-  --popover: #11151D;
-  --popover-foreground: #F5F7FA;
+  --card: #ffffff;
+  --card-foreground: oklch(0.18 0.015 265);
+  --popover: #ffffff;
+  --popover-foreground: oklch(0.18 0.015 265);
 
-  --primary: #22E0C7;
-  --primary-foreground: #06120F;
-  --secondary: #161B26;
-  --secondary-foreground: #F5F7FA;
-  --muted: #161B26;
-  --muted-foreground: #A8B0BD;
-  --accent: #22E0C7;
-  --accent-foreground: #06120F;
-  --amber: #F2A65A;
+  --primary: oklch(0.42 0.18 265);
+  --primary-foreground: oklch(0.985 0.005 85);
+  --secondary: oklch(0.96 0.008 85);
+  --secondary-foreground: oklch(0.22 0.015 265);
+  --muted: oklch(0.96 0.008 85);
+  --muted-foreground: oklch(0.45 0.012 265);
+  --accent: oklch(0.42 0.18 265);
+  --accent-foreground: oklch(0.985 0.005 85);
+  --amber: oklch(0.62 0.16 50);
 
-  --destructive: #ef4444;
-  --destructive-foreground: #F5F7FA;
+  --destructive: #b91c1c;
+  --destructive-foreground: oklch(0.985 0.005 85);
 
-  --border: rgba(255, 255, 255, 0.08);
-  --input: rgba(255, 255, 255, 0.10);
-  --ring: #22E0C7;
+  --border: oklch(0.92 0.006 85);
+  --input: oklch(0.92 0.006 85);
+  --ring: oklch(0.42 0.18 265);
 }
 
 @layer base {
@@ -92,13 +95,13 @@
   }
 
   ::selection {
-    background-color: color-mix(in oklab, var(--accent) 40%, transparent);
+    background-color: color-mix(in oklab, var(--accent) 22%, transparent);
     color: var(--foreground);
   }
 }
 
 @utility text-gradient-accent {
-  background: linear-gradient(135deg, #22E0C7 0%, #6EF2D6 50%, #F2A65A 100%);
+  background: linear-gradient(135deg, oklch(0.42 0.18 265) 0%, oklch(0.52 0.20 280) 50%, oklch(0.62 0.16 50) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -106,16 +109,89 @@
 
 @utility glow-border {
   box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.04) inset,
-    0 0 0 1px rgba(34, 224, 199, 0.12),
-    0 20px 60px -30px rgba(34, 224, 199, 0.35);
+    0 1px 0 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 0 1px color-mix(in oklab, var(--accent) 14%, transparent),
+    0 20px 60px -30px color-mix(in oklab, var(--accent) 22%, transparent);
 }
 
 @utility bg-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    linear-gradient(color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+
+@utility bg-paper {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(circle at 20% 8%, color-mix(in oklab, var(--accent) 6%, transparent) 0, transparent 45%),
+    radial-gradient(circle at 80% 30%, color-mix(in oklab, var(--amber) 7%, transparent) 0, transparent 50%);
+}
+
+@utility prose-editorial {
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.78;
+  color: var(--foreground);
+
+  & p { margin: 0 0 1.5em; }
+
+  & h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.75rem, 3.2vw, 2.5rem);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--foreground);
+    margin: 0 0 0.6em;
+  }
+  & h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--foreground);
+    margin: 2em 0 0.6em;
+  }
+  & a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  & strong { color: var(--foreground); font-weight: 600; }
+  & ul, & ol { margin: 0 0 1.5em; padding-left: 1.5em; }
+  & ul li { list-style: disc; margin-bottom: .5em; }
+  & ol li { list-style: decimal; margin-bottom: .5em; }
+  & blockquote {
+    margin: 2em 0;
+    padding: 0 0 0 1.25em;
+    border-left: 3px solid var(--accent);
+    font-style: italic;
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: color-mix(in oklab, var(--foreground) 80%, transparent);
+  }
+  & code {
+    font-family: var(--font-mono);
+    font-size: 0.92em;
+    background: var(--surface-2);
+    padding: 0.15em 0.4em;
+    border-radius: 0.35em;
+  }
+}
+
+@utility drop-cap {
+  &::first-letter {
+    font-family: var(--font-display);
+    float: left;
+    font-size: 4.5em;
+    line-height: 0.88;
+    font-weight: 700;
+    padding: 0.08em 0.14em 0 0;
+    color: var(--accent);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

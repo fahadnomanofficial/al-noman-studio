@@ -16,12 +16,13 @@ import {
   Share2,
   Link as LinkIcon,
   Loader2,
+  Clock,
+  Calendar,
 } from "lucide-react";
-import { getPost, allPosts, type BlogPost } from "@/components/portfolio/blogs";
+import { getPost, allPosts, type BlogPost, type BlogSection } from "@/components/portfolio/blogs";
 import fahadAsset from "@/assets/fahad.jpg.asset.json";
 import { Nav } from "@/components/portfolio/Nav";
 import { Footer } from "@/components/portfolio/Footer";
-import { FloatingOrbs } from "@/components/portfolio/FloatingOrbs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/blog/$slug")({
@@ -158,18 +159,45 @@ function stripMarkdown(md: string) {
     .replace(/\n{2,}/g, "\n\n");
 }
 
+/**
+ * Split markdown into chapters keyed by H2 heading.
+ * Returns: [{ heading | null, body }] where body is the markdown between this H2 and the next.
+ */
+type Chapter = { heading: string | null; body: string };
+function splitChapters(md: string): Chapter[] {
+  const lines = md.split("\n");
+  const chapters: Chapter[] = [];
+  let current: Chapter = { heading: null, body: "" };
+  for (const line of lines) {
+    const m = /^##\s+(.+)$/.exec(line);
+    if (m) {
+      if (current.body.trim() || current.heading !== null) chapters.push(current);
+      current = { heading: m[1].trim(), body: "" };
+    } else {
+      current.body += line + "\n";
+    }
+  }
+  if (current.body.trim() || current.heading !== null) chapters.push(current);
+  return chapters;
+}
+
 function BlogPostPage() {
   const { post } = Route.useLoaderData() as { post: BlogPost };
   const { scrollYProgress } = useScroll();
   const toc = useMemo(() => extractToc(post.content), [post.content]);
+  const chapters = useMemo(() => splitChapters(post.content), [post.content]);
+  const sectionMap = useMemo(() => {
+    const map = new Map<string, BlogSection>();
+    (post.sections ?? []).forEach((s) => map.set(s.heading, s));
+    return map;
+  }, [post.sections]);
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const articleRef = useRef<HTMLDivElement | null>(null);
 
-  // Likes (localStorage)
   const [likes, setLikes] = useLocalStorage<number>(`blog:${post.slug}:likes`, 0);
   const [liked, setLiked] = useLocalStorage<boolean>(`blog:${post.slug}:liked`, false);
 
-  // Reactions
   const REACTIONS = [
     { key: "fire", emoji: "🔥" },
     { key: "idea", emoji: "💡" },
@@ -181,30 +209,25 @@ function BlogPostPage() {
     {},
   );
 
-  // Comments
   type Comment = { id: string; name: string; message: string; at: number };
   const [comments, setComments] = useLocalStorage<Comment[]>(`blog:${post.slug}:comments`, []);
   const [cName, setCName] = useState("");
   const [cMsg, setCMsg] = useState("");
 
-  // AI summary
   const [summary, setSummary] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  // AI Q&A
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [askLoading, setAskLoading] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
 
-  // TTS
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<{ ctx: AudioContext | null; abort: AbortController | null }>({
     ctx: null,
     abort: null,
   });
 
-  // Active TOC tracking
   useEffect(() => {
     if (!articleRef.current) return;
     const headings = Array.from(articleRef.current.querySelectorAll("h2, h3")) as HTMLElement[];
@@ -239,7 +262,7 @@ function BlogPostPage() {
         if (done) break;
         setSummary((s) => s + dec.decode(value));
       }
-    } catch (e) {
+    } catch {
       toast.error("Could not generate summary.");
     } finally {
       setSummaryLoading(false);
@@ -277,7 +300,7 @@ function BlogPostPage() {
           return next;
         });
       }
-    } catch (err) {
+    } catch {
       setChat((c) => {
         const next = [...c];
         next[next.length - 1] = {
@@ -365,14 +388,13 @@ function BlogPostPage() {
           parser.feed(value);
         }
       }
-      // Stop indicator after audio finishes
       const remaining = Math.max(0, playhead - ctx.currentTime);
       setTimeout(() => {
         if (audioRef.current.ctx === ctx) {
           stopAudio();
         }
       }, remaining * 1000 + 200);
-    } catch (err) {
+    } catch {
       if (!abort.signal.aborted) toast.error("Could not play audio.");
       await stopAudio();
     }
@@ -414,290 +436,398 @@ function BlogPostPage() {
     .filter((p) => p.slug !== post.slug)
     .slice(0, 3);
 
+  // Render a single chapter — heading (with chapter number), optional image, then markdown body
+  const renderChapter = (ch: Chapter, idx: number, totalChapters: number) => {
+    const chapterNumber = ch.heading ? String(idx).padStart(2, "0") : null;
+    const section = ch.heading ? sectionMap.get(ch.heading) : undefined;
+    const isIntro = ch.heading === null;
+
+    return (
+      <section key={idx} className="mb-16 last:mb-0">
+        {ch.heading && (
+          <header className="mb-8">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+                Chapter {chapterNumber}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+              <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                {idx} / {totalChapters - 1}
+              </span>
+            </div>
+            <h2
+              id={slugify(ch.heading)}
+              className="font-display text-3xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-4xl lg:text-[2.5rem]"
+            >
+              {ch.heading}
+            </h2>
+            {section && (
+              <figure className="mt-8 overflow-hidden rounded-2xl border border-border bg-surface-2 shadow-glow-sm">
+                <img
+                  src={section.image}
+                  alt={ch.heading}
+                  loading="lazy"
+                  width={1280}
+                  height={720}
+                  className="aspect-[16/9] w-full object-cover"
+                />
+                {section.caption && (
+                  <figcaption className="border-t border-border bg-surface px-5 py-3 font-serif text-sm italic leading-relaxed text-muted-foreground">
+                    {section.caption}
+                  </figcaption>
+                )}
+              </figure>
+            )}
+          </header>
+        )}
+
+        <div
+          className={`prose-editorial ${isIntro ? "drop-cap" : ""}`}
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              h3: ({ children }) => {
+                const t = String(children);
+                return <h3 id={slugify(t)}>{children}</h3>;
+              },
+            }}
+          >
+            {ch.body.trim()}
+          </ReactMarkdown>
+        </div>
+      </section>
+    );
+  };
+
   return (
-    <div className="relative min-h-screen overflow-x-clip bg-background text-foreground">
-      <FloatingOrbs />
+    <div className="bg-paper relative min-h-screen overflow-x-clip text-foreground">
       <Nav />
 
       {/* Reading progress bar */}
       <motion.div
         style={{ scaleX: scrollYProgress }}
-        className="fixed left-0 right-0 top-0 z-[60] h-[3px] origin-left bg-gradient-to-r from-accent via-accent to-amber"
+        className="fixed left-0 right-0 top-0 z-[60] h-[3px] origin-left bg-accent"
       />
 
       <main className="pt-28 pb-24">
-        <article className="mx-auto max-w-3xl px-5 sm:px-8">
+        {/* HERO */}
+        <header className="mx-auto max-w-3xl px-5 sm:px-8">
           <Link
             to="/"
             hash="community"
-            className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-wider text-muted-foreground transition-colors hover:text-accent"
+            className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-accent"
           >
             <ArrowLeft className="h-3.5 w-3.5" /> back to My Community
           </Link>
 
-          <div className="mt-6 flex flex-wrap items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             {post.tags.map((t) => (
-              <span key={t} className="rounded-full border border-accent/30 bg-accent/5 px-2.5 py-0.5 text-accent">
+              <span
+                key={t}
+                className="rounded-full border border-accent/25 bg-accent/[0.06] px-2.5 py-0.5 font-mono text-[10.5px] uppercase tracking-wider text-accent"
+              >
                 {t}
               </span>
             ))}
-            <span>·</span>
-            <span>{post.date}</span>
-            <span>·</span>
-            <span>{post.readMinutes} min read</span>
           </div>
 
-          <h1 className="mt-4 font-display text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl">
+          <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             {post.title}
           </h1>
 
-          <div className="mt-6 flex items-center justify-between gap-4">
+          <p className="mt-6 font-serif text-xl leading-relaxed text-muted-foreground">
+            {post.excerpt}
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-y border-border py-5">
             <div className="flex items-center gap-3">
               <img
                 src={fahadAsset.url}
                 alt="Fahad Al Noman"
-                className="h-10 w-10 rounded-full object-cover ring-1 ring-accent/30"
+                className="h-11 w-11 rounded-full object-cover ring-2 ring-surface ring-offset-2 ring-offset-background"
               />
               <div className="text-sm">
                 <div className="font-semibold text-foreground">Fahad Al Noman</div>
-                <div className="text-xs text-muted-foreground">Full-Stack Dev · Writing from Malta</div>
+                <div className="text-xs text-muted-foreground">Full-Stack Developer · Writing from Malta</div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <ShareBtn onClick={() => share("copy")} label="Copy link"><LinkIcon className="h-4 w-4" /></ShareBtn>
-              <ShareBtn onClick={() => share("twitter")} label="Share on X">𝕏</ShareBtn>
-              <ShareBtn onClick={() => share("linkedin")} label="Share on LinkedIn">in</ShareBtn>
-              <ShareBtn onClick={() => share("whatsapp")} label="Share on WhatsApp"><Share2 className="h-4 w-4" /></ShareBtn>
+            <div className="flex items-center gap-4 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {post.date}</span>
+              <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {post.readMinutes} min read</span>
             </div>
           </div>
+        </header>
 
-          <div className="mt-8 overflow-hidden rounded-2xl border border-border shadow-glow">
+        {/* COVER */}
+        <figure className="mx-auto mt-10 max-w-5xl px-5 sm:px-8">
+          <div className="overflow-hidden rounded-3xl border border-border bg-surface shadow-editorial">
             <img
               src={post.cover}
               alt={post.title}
-              width={1280}
-              height={720}
-              className="aspect-[16/10] w-full object-cover"
+              width={1600}
+              height={900}
+              className="aspect-[16/9] w-full object-cover"
             />
           </div>
+        </figure>
 
-          {/* Action rail */}
-          <div className="sticky top-20 z-30 mt-10 -mx-2 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-background/80 px-3 py-2 backdrop-blur-xl">
-            <RailBtn onClick={playAudio} active={playing}>
-              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              {playing ? "Stop" : "Listen"}
-            </RailBtn>
-            <RailBtn onClick={runSummary}>
-              {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              Summarize
-            </RailBtn>
-            <RailBtn
-              onClick={() => {
-                setLiked(!liked);
-                setLikes(liked ? Math.max(0, likes - 1) : likes + 1);
-              }}
-              active={liked}
-            >
-              <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} /> {likes}
-            </RailBtn>
-            <a
-              href="#comments"
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground"
-            >
-              <MessageCircle className="h-4 w-4" /> {comments.length}
-            </a>
-            {toc.length > 0 && (
-              <details className="ml-auto">
-                <summary className="cursor-pointer list-none rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-                  Contents
-                </summary>
-                <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border bg-popover p-3 shadow-xl">
-                  <ul className="space-y-1 text-sm">
-                    {toc.map((t) => (
-                      <li key={t.id} className={t.level === 3 ? "pl-3" : ""}>
-                        <a
-                          href={`#${t.id}`}
-                          className={`block rounded px-2 py-1 transition-colors ${
-                            activeId === t.id
-                              ? "bg-accent/10 text-accent"
-                              : "text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-                          }`}
-                        >
-                          {t.text}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            )}
-          </div>
-
-          {/* AI panel */}
-          {(aiOpen || summary || chat.length > 0) && (
-            <div className="mt-8 rounded-2xl border border-accent/30 bg-accent/5 p-5">
-              <div className="mb-3 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-accent">
-                <Sparkles className="h-3.5 w-3.5" /> AI · grounded in this article
+        {/* BODY: 3-column shell on lg+ */}
+        <div className="mx-auto mt-12 grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[220px_minmax(0,1fr)_240px]">
+          {/* LEFT RAIL: TOC */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-28">
+              <div className="mb-3 font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Contents
               </div>
-
-              {(summary || summaryLoading) && (
-                <div className="mb-5">
-                  <div className="mb-1 text-xs font-semibold text-muted-foreground">TL;DR</div>
-                  {summaryLoading && !summary ? (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Summarizing…
-                    </div>
-                  ) : (
-                    <div className="prose prose-invert prose-sm max-w-none text-foreground/90">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {chat.length > 0 && (
-                <div className="mb-4 space-y-3">
-                  {chat.map((m, i) => (
-                    <div
-                      key={i}
-                      className={`rounded-xl px-3 py-2 text-sm ${
-                        m.role === "user"
-                          ? "ml-auto max-w-[85%] bg-accent text-accent-foreground"
-                          : "max-w-[95%] bg-background/60 text-foreground"
+              <ul className="space-y-1.5 border-l border-border">
+                {toc.map((t) => (
+                  <li key={t.id} className={t.level === 3 ? "pl-3" : ""}>
+                    <a
+                      href={`#${t.id}`}
+                      className={`-ml-px block border-l-2 py-1 pl-3 text-sm leading-snug transition-colors ${
+                        activeId === t.id
+                          ? "border-accent font-semibold text-foreground"
+                          : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"
                       }`}
                     >
-                      {m.role === "assistant" ? (
-                        <div className="prose prose-invert prose-sm max-w-none">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {m.content || "…"}
-                          </ReactMarkdown>
-                        </div>
-                      ) : (
-                        m.content
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                      {t.text}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
 
-              <form onSubmit={ask} className="flex items-center gap-2">
+          {/* CENTER: article */}
+          <article ref={articleRef} className="mx-auto w-full max-w-[680px]">
+            {chapters.map((ch, i) => renderChapter(ch, i, chapters.length))}
+
+            {/* AI panel (renders when opened) */}
+            {(aiOpen || summary || chat.length > 0) && (
+              <div className="mt-12 rounded-2xl border border-accent/25 bg-accent/[0.04] p-6">
+                <div className="mb-4 flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+                  <Sparkles className="h-3.5 w-3.5" /> AI · grounded in this article
+                </div>
+
+                {(summary || summaryLoading) && (
+                  <div className="mb-5">
+                    <div className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">TL;DR</div>
+                    {summaryLoading && !summary ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Summarizing…
+                      </div>
+                    ) : (
+                      <div className="text-[15px] leading-relaxed text-foreground/90 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {chat.length > 0 && (
+                  <div className="mb-4 space-y-3">
+                    {chat.map((m, i) => (
+                      <div
+                        key={i}
+                        className={`rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                          m.role === "user"
+                            ? "ml-auto max-w-[85%] bg-accent text-accent-foreground"
+                            : "max-w-[95%] bg-surface text-foreground"
+                        }`}
+                      >
+                        {m.role === "assistant" ? (
+                          <div className="[&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:ml-5 [&_ul]:list-disc">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {m.content || "…"}
+                            </ReactMarkdown>
+                          </div>
+                        ) : (
+                          m.content
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <form onSubmit={ask} className="flex items-center gap-2">
+                  <input
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="Ask anything about this article…"
+                    className="flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent/50 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    disabled={askLoading || !question.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-50"
+                  >
+                    {askLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    Ask
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* Reactions */}
+            <div className="mt-16 flex flex-wrap items-center gap-2 border-t border-border pt-8">
+              <span className="mr-2 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">React</span>
+              {REACTIONS.map((r) => (
+                <button
+                  key={r.key}
+                  onClick={() =>
+                    setReactions({ ...reactions, [r.key]: (reactions[r.key] ?? 0) + 1 })
+                  }
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-sm transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-glow-sm"
+                >
+                  <span className="text-base transition-transform group-hover:scale-110">{r.emoji}</span>
+                  <span className="font-mono text-xs text-muted-foreground">{reactions[r.key] ?? 0}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Author card */}
+            <div className="mt-10 flex items-center gap-4 rounded-2xl border border-border bg-surface p-5 shadow-glow-sm">
+              <img
+                src={fahadAsset.url}
+                alt="Fahad Al Noman"
+                className="h-16 w-16 rounded-full object-cover"
+              />
+              <div className="flex-1">
+                <div className="font-display text-lg font-semibold text-foreground">Fahad Al Noman</div>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Full-stack developer writing from Malta. Building marketplaces, growing organic
+                  traffic, and shipping with clients across four continents.
+                </p>
+              </div>
+            </div>
+
+            {/* Comments */}
+            <div id="comments" className="mt-12 border-t border-border pt-10">
+              <h3 className="font-display text-2xl font-bold text-foreground">
+                Comments <span className="text-muted-foreground">({comments.length})</span>
+              </h3>
+              <form onSubmit={addComment} className="mt-5 space-y-3">
                 <input
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask anything about this article…"
-                  className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent/50 focus:outline-none"
+                  value={cName}
+                  onChange={(e) => setCName(e.target.value)}
+                  placeholder="Your name"
+                  maxLength={60}
+                  className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent/50 focus:outline-none"
+                />
+                <textarea
+                  value={cMsg}
+                  onChange={(e) => setCMsg(e.target.value)}
+                  placeholder="Share a thought…"
+                  maxLength={1000}
+                  rows={3}
+                  className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent/50 focus:outline-none"
                 />
                 <button
                   type="submit"
-                  disabled={askLoading || !question.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-50"
+                  disabled={!cName.trim() || !cMsg.trim()}
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-50"
                 >
-                  {askLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Ask
+                  Post comment <Send className="h-3.5 w-3.5" />
                 </button>
+                <p className="text-[11px] text-muted-foreground">
+                  Comments are stored on your device only — they won't be visible to other readers.
+                </p>
               </form>
+
+              <ul className="mt-8 space-y-4">
+                {comments.map((c) => (
+                  <li key={c.id} className="rounded-xl border border-border bg-surface p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                      <span className="font-mono text-[10.5px] text-muted-foreground">
+                        {new Date(c.at).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">
+                      {c.message}
+                    </p>
+                  </li>
+                ))}
+                {comments.length === 0 && (
+                  <li className="rounded-xl border border-dashed border-border bg-surface/60 p-6 text-center text-sm text-muted-foreground">
+                    Be the first to leave a thought.
+                  </li>
+                )}
+              </ul>
             </div>
-          )}
+          </article>
 
-          {/* Article body */}
-          <div
-            ref={articleRef}
-            className="prose prose-invert prose-lg mt-10 max-w-none prose-headings:font-display prose-headings:tracking-tight prose-h2:mt-12 prose-h2:text-2xl prose-h2:text-foreground prose-h3:text-xl prose-p:leading-relaxed prose-p:text-foreground/85 prose-a:text-accent prose-strong:text-foreground prose-code:rounded prose-code:bg-surface-2 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-accent prose-code:before:hidden prose-code:after:hidden prose-li:text-foreground/85"
+          {/* RIGHT RAIL: actions */}
+          <aside className="hidden lg:block">
+            <div className="sticky top-28 space-y-3 rounded-2xl border border-border bg-surface p-4 shadow-glow-sm">
+              <div className="mb-1 font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Article tools
+              </div>
+              <ActionBtn onClick={playAudio} active={playing} icon={playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}>
+                {playing ? "Stop audio" : "Listen"}
+              </ActionBtn>
+              <ActionBtn onClick={runSummary} icon={summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}>
+                Summarize
+              </ActionBtn>
+              <ActionBtn
+                onClick={() => {
+                  setLiked(!liked);
+                  setLikes(liked ? Math.max(0, likes - 1) : likes + 1);
+                }}
+                active={liked}
+                icon={<Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />}
+              >
+                {likes} like{likes === 1 ? "" : "s"}
+              </ActionBtn>
+              <a
+                href="#comments"
+                className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground"
+              >
+                <MessageCircle className="h-4 w-4" /> {comments.length} comment{comments.length === 1 ? "" : "s"}
+              </a>
+
+              <div className="!mt-4 border-t border-border pt-3">
+                <div className="mb-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Share
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <ShareBtn onClick={() => share("copy")} label="Copy link"><LinkIcon className="h-4 w-4" /></ShareBtn>
+                  <ShareBtn onClick={() => share("twitter")} label="Share on X">𝕏</ShareBtn>
+                  <ShareBtn onClick={() => share("linkedin")} label="Share on LinkedIn">in</ShareBtn>
+                  <ShareBtn onClick={() => share("whatsapp")} label="Share on WhatsApp"><Share2 className="h-4 w-4" /></ShareBtn>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        {/* Mobile floating action bar */}
+        <div className="fixed inset-x-0 bottom-3 z-40 mx-3 flex items-center justify-around gap-1 rounded-full border border-border bg-background/95 px-2 py-1.5 shadow-editorial backdrop-blur-xl lg:hidden">
+          <MobileBtn onClick={playAudio} active={playing}>
+            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </MobileBtn>
+          <MobileBtn onClick={runSummary}>
+            {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </MobileBtn>
+          <MobileBtn
+            onClick={() => {
+              setLiked(!liked);
+              setLikes(liked ? Math.max(0, likes - 1) : likes + 1);
+            }}
+            active={liked}
           >
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                h2: ({ children }) => {
-                  const text = String(children);
-                  return <h2 id={slugify(text)}>{children}</h2>;
-                },
-                h3: ({ children }) => {
-                  const text = String(children);
-                  return <h3 id={slugify(text)}>{children}</h3>;
-                },
-              }}
-            >
-              {post.content}
-            </ReactMarkdown>
-          </div>
-
-          {/* Reactions */}
-          <div className="mt-12 flex flex-wrap items-center gap-2 border-t border-border pt-8">
-            <span className="mr-2 text-xs font-mono uppercase tracking-wider text-muted-foreground">React</span>
-            {REACTIONS.map((r) => (
-              <button
-                key={r.key}
-                onClick={() =>
-                  setReactions({ ...reactions, [r.key]: (reactions[r.key] ?? 0) + 1 })
-                }
-                className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-sm transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-glow-sm"
-              >
-                <span className="text-base transition-transform group-hover:scale-110">{r.emoji}</span>
-                <span className="font-mono text-xs text-muted-foreground">{reactions[r.key] ?? 0}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Comments */}
-          <div id="comments" className="mt-12 border-t border-border pt-8">
-            <h3 className="font-display text-2xl font-bold text-foreground">
-              Comments <span className="text-muted-foreground">({comments.length})</span>
-            </h3>
-            <form onSubmit={addComment} className="mt-5 space-y-3">
-              <input
-                value={cName}
-                onChange={(e) => setCName(e.target.value)}
-                placeholder="Your name"
-                maxLength={60}
-                className="w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent/50 focus:outline-none"
-              />
-              <textarea
-                value={cMsg}
-                onChange={(e) => setCMsg(e.target.value)}
-                placeholder="Share a thought…"
-                maxLength={1000}
-                rows={3}
-                className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent/50 focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={!cName.trim() || !cMsg.trim()}
-                className="inline-flex items-center gap-2 rounded-full bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground disabled:opacity-50"
-              >
-                Post comment <Send className="h-3.5 w-3.5" />
-              </button>
-              <p className="text-[11px] text-muted-foreground">
-                Comments are stored on your device only — they won't be visible to other readers.
-              </p>
-            </form>
-
-            <ul className="mt-8 space-y-4">
-              {comments.map((c) => (
-                <li key={c.id} className="rounded-xl border border-border bg-surface p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-foreground">{c.name}</span>
-                    <span className="font-mono text-[10.5px] text-muted-foreground">
-                      {new Date(c.at).toLocaleString()}
-                    </span>
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground/85">
-                    {c.message}
-                  </p>
-                </li>
-              ))}
-              {comments.length === 0 && (
-                <li className="rounded-xl border border-dashed border-border bg-surface/50 p-6 text-center text-sm text-muted-foreground">
-                  Be the first to leave a thought.
-                </li>
-              )}
-            </ul>
-          </div>
-        </article>
+            <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
+          </MobileBtn>
+          <MobileBtn onClick={() => share("native")}>
+            <Share2 className="h-4 w-4" />
+          </MobileBtn>
+        </div>
 
         {/* More from My Community */}
-        <section className="mx-auto mt-20 max-w-6xl px-5 sm:px-8">
+        <section className="mx-auto mt-24 max-w-6xl px-5 sm:px-8">
           <div className="mb-6 flex items-center gap-3">
-            <span className="font-mono text-[11px] uppercase tracking-wider text-accent">▸ more from My Community</span>
+            <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">▸ more from My Community</span>
             <span className="h-px flex-1 bg-border" />
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -706,7 +836,7 @@ function BlogPostPage() {
                 key={p.slug}
                 to="/blog/$slug"
                 params={{ slug: p.slug }}
-                className="group overflow-hidden rounded-2xl border border-border bg-surface transition-all hover:border-accent/40 hover:shadow-glow-sm"
+                className="group overflow-hidden rounded-2xl border border-border bg-surface transition-all hover:border-accent/40 hover:shadow-glow"
               >
                 <img
                   src={p.cover}
@@ -714,14 +844,14 @@ function BlogPostPage() {
                   loading="lazy"
                   className="aspect-[16/10] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                 />
-                <div className="p-4">
+                <div className="p-5">
                   <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                     {p.date} · {p.readMinutes} min
                   </div>
                   <h4 className="mt-1.5 font-display text-base font-semibold text-foreground group-hover:text-accent">
                     {p.title}
                   </h4>
-                  <div className="mt-2 inline-flex items-center gap-1 text-xs text-accent">
+                  <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-accent">
                     Read <ArrowUpRight className="h-3 w-3" />
                   </div>
                 </div>
@@ -736,7 +866,33 @@ function BlogPostPage() {
   );
 }
 
-function RailBtn({
+function ActionBtn({
+  children,
+  onClick,
+  active,
+  icon,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  active?: boolean;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-sm font-medium transition-all ${
+        active
+          ? "border-accent/60 bg-accent/10 text-accent"
+          : "border-border bg-background text-foreground hover:border-accent/40 hover:bg-surface-2"
+      }`}
+    >
+      {icon}
+      <span>{children}</span>
+    </button>
+  );
+}
+
+function MobileBtn({
   children,
   onClick,
   active,
@@ -748,10 +904,8 @@ function RailBtn({
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all hover:-translate-y-0.5 ${
-        active
-          ? "border-accent/60 bg-accent/15 text-accent"
-          : "border-border bg-surface text-muted-foreground hover:border-accent/40 hover:text-foreground"
+      className={`grid h-10 w-10 place-items-center rounded-full transition-colors ${
+        active ? "bg-accent text-accent-foreground" : "text-foreground hover:bg-surface-2"
       }`}
     >
       {children}
@@ -773,7 +927,7 @@ function ShareBtn({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="grid h-8 w-8 place-items-center rounded-full border border-border bg-surface text-xs font-semibold text-muted-foreground transition-all hover:border-accent/40 hover:text-accent"
+      className="grid h-9 w-9 place-items-center rounded-full border border-border bg-background text-sm font-semibold text-muted-foreground transition-all hover:border-accent/40 hover:text-accent"
     >
       {children}
     </button>
