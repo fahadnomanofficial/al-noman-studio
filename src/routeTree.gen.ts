@@ -10,11 +10,29 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as ApiBlogTtsRouteImport } from './routes/api/blog-tts'
+import { Route as ApiBlogAiRouteImport } from './routes/api/blog-ai'
 import { Route as ApiPublicContactRouteImport } from './routes/api/public/contact'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBlogTtsRoute = ApiBlogTtsRouteImport.update({
+  id: '/api/blog-tts',
+  path: '/api/blog-tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBlogAiRoute = ApiBlogAiRouteImport.update({
+  id: '/api/blog-ai',
+  path: '/api/blog-ai',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
@@ -25,27 +43,55 @@ const ApiPublicContactRoute = ApiPublicContactRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/blog-ai': typeof ApiBlogAiRoute
+  '/api/blog-tts': typeof ApiBlogTtsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/api/public/contact': typeof ApiPublicContactRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/blog-ai': typeof ApiBlogAiRoute
+  '/api/blog-tts': typeof ApiBlogTtsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/api/public/contact': typeof ApiPublicContactRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/blog-ai': typeof ApiBlogAiRoute
+  '/api/blog-tts': typeof ApiBlogTtsRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/api/public/contact': typeof ApiPublicContactRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/contact'
+  fullPaths:
+    | '/'
+    | '/api/blog-ai'
+    | '/api/blog-tts'
+    | '/blog/$slug'
+    | '/api/public/contact'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/contact'
-  id: '__root__' | '/' | '/api/public/contact'
+  to:
+    | '/'
+    | '/api/blog-ai'
+    | '/api/blog-tts'
+    | '/blog/$slug'
+    | '/api/public/contact'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/blog-ai'
+    | '/api/blog-tts'
+    | '/blog/$slug'
+    | '/api/public/contact'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiBlogAiRoute: typeof ApiBlogAiRoute
+  ApiBlogTtsRoute: typeof ApiBlogTtsRoute
+  BlogSlugRoute: typeof BlogSlugRoute
   ApiPublicContactRoute: typeof ApiPublicContactRoute
 }
 
@@ -56,6 +102,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/blog-tts': {
+      id: '/api/blog-tts'
+      path: '/api/blog-tts'
+      fullPath: '/api/blog-tts'
+      preLoaderRoute: typeof ApiBlogTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/blog-ai': {
+      id: '/api/blog-ai'
+      path: '/api/blog-ai'
+      fullPath: '/api/blog-ai'
+      preLoaderRoute: typeof ApiBlogAiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/contact': {
@@ -70,8 +137,21 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiBlogAiRoute: ApiBlogAiRoute,
+  ApiBlogTtsRoute: ApiBlogTtsRoute,
+  BlogSlugRoute: BlogSlugRoute,
   ApiPublicContactRoute: ApiPublicContactRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
